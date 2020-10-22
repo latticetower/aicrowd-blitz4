@@ -289,7 +289,7 @@ def crop_top(x):
     hmin, wmin = coords.min(0)
     return x[hmin:], hmin
 
-def align(x1, x2):
+def align(x1, x2, return_centers=False):
     h1, w1 = x1.shape
     h2, w2 = x2.shape
     h = min(h1, h2)
@@ -299,17 +299,19 @@ def align(x1, x2):
     left = min(cx1, cx2)
     w = min(w1 - cx1, w2 - cx2)
     #print(cy1, cx1, cy2, cx2)
-    return x1[:h, cx1-left:cx1+ w], x2[:h, cx2-left:cx2+ w]
-    pass
+    aligned1, aligned2 = x1[:h, cx1-left:cx1+ w], x2[:h, cx2-left:cx2+ w]
+    if return_centers:
+        return aligned1, aligned2, h, cx1, cx2
+    return aligned1, aligned2
 
-def match(x1, x2, show=False, align_type='best'):
+def match(x1, x2, show=False, align_type='best', return_coords=False):
     crop_type = 'both' if align_type == 'best' else 'w'
-    x1, _, _ = crop(x1, type=crop_type)
+    x1, hmin1, wmin1 = crop(x1, type=crop_type)
     if show:
         plt.imshow(x1)
         plt.title("x1")
         plt.show()
-    x2, _, _ = crop(x2, type=crop_type)
+    x2, hmin2, wmin2 = crop(x2, type=crop_type)
     if show:
         plt.imshow(x2)
         plt.title("x2")
@@ -317,7 +319,10 @@ def match(x1, x2, show=False, align_type='best'):
     h1, w1 = x1.shape
     h2, w2 = x2.shape
     if align_type == 'best':
-        x1, x2 = align(x1, x2)
+        if return_coords:
+            x1, x2, h, c1, c2 = align(x1, x2, return_centers=True)
+        else:
+            x1, x2 = align(x1, x2)
     elif w1 != w2:
         #h = min(h1, h2)
         w = min(w1, w2)
@@ -350,7 +355,10 @@ def match(x1, x2, show=False, align_type='best'):
         plt.show()
         plt.imshow(union * (~intersection))
         plt.show()
-    return diff.sum()
+    diff = diff.sum()
+    if return_coords:
+        return diff, (hmin1, wmin1), (hmin2, wmin2), h, c1, c2
+    return diff
 
 
 
@@ -389,6 +397,19 @@ outer_transform = {
     'left': lambda x: np.rot90(x, 3)
 }
 
+# the following helpers are for rotated-to-original coordinates conversion:
+coord_inner_transform = {
+    'down': lambda x, y: (x, y),
+    'up': lambda x, y: (-x, -y),
+    'right': lambda y, x: (-x, y),
+    'left': lambda x, y: (y, x)
+}
+coord_outer_transform = {
+    'down': lambda x, y: (-x, -y),
+    'up': lambda x, y: (x, y),
+    'right': lambda x, y: (y, -x),
+    'left': lambda x, y: (-y, x)
+}
 
 def compare(res, inner_transformed, outer_transformed):
     labels = ['down', 'up', 'right', 'left']
