@@ -17,6 +17,7 @@ opencv-python==4.4.0.44
 pandas==0.25.1
 Pillow==7.2.0
 pretrainedmodels==0.7.4
+PubChemPy==1.0.4
 pytesseract==0.3.6
 pytorch-tabnet==1.2.0
 scikit-image==0.17.2
